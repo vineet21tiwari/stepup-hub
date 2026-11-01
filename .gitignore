@@ -19,3 +19,6 @@ mobile/.dart_tool/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Built app for sharing
+*.apk
