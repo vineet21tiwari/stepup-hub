@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /c/Vineet_Projects/stepup-hub-phase1/backend/src/main/java/com/stepuphub && find . -iname \"*Announcement*\")",
+      "Read(//c/Vineet_Projects/stepup-hub-phase1/backend/src/main/java/com/stepuphub/**)",
+      "Bash(find \"C:/Vineet_Projects/stepup-hub-phase1/backend/src/main/resources\" -iname \"application*.properties\" -o -iname \"application*.yml\" 2>/dev/null)",
+      "Read(//c/Vineet_Projects/stepup-hub-phase1/backend/src/main/resources/**)",
+      "Bash(node smoke.js)",
+      "Bash(node smoke2.js)",
+      "Bash(npm run *)",
+      "Bash(netstat -ano)",
+      "Read(//c/Vineet_Projects/stepup-hub-phase1/backend/**)",
+      "Bash(mvn -q -o compile)",
+      "Bash(echo \"EXIT:$?\")"
+    ]
+  }
+}

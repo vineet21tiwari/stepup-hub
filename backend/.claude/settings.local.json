@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn -q compile)",
+      "Bash(export JAVA_HOME=\"/c/Program Files/Java/jdk-17\")"
+    ]
+  }
+}

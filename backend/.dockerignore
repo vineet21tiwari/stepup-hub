@@ -1,0 +1,5 @@
+target
+uploads
+local.properties
+*.iml
+.idea

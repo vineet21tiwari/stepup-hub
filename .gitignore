@@ -1,0 +1,21 @@
+# Backend
+backend/target/
+backend/uploads/
+backend/local.properties
+
+# Web
+web/node_modules/
+web/dist/
+web/.env
+web/.env.local
+
+# Mobile
+mobile/build/
+mobile/.dart_tool/
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
