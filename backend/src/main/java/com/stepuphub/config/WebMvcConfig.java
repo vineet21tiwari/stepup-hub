@@ -5,6 +5,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
@@ -19,7 +22,16 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        String location = Paths.get(uploadDir).toAbsolutePath().normalize().toUri().toString();
+        Path dir = Paths.get(uploadDir).toAbsolutePath().normalize();
+        // On a fresh server the folder doesn't exist yet; toUri() then has no trailing slash and
+        // Spring resolves files against the parent folder instead, so create it and force the slash.
+        try {
+            Files.createDirectories(dir);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Cannot create upload dir " + dir, ex);
+        }
+        String location = dir.toUri().toString();
+        if (!location.endsWith("/")) location += "/";
         registry.addResourceHandler("/uploads/**").addResourceLocations(location);
     }
 }
