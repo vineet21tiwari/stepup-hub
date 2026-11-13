@@ -160,6 +160,21 @@ form .segmented { margin-bottom: 0; }
 .change-request-actions { margin-top: 6px; }
 .change-form { border: 1px dashed var(--border); border-radius: 10px; padding: 12px; }
 
+/* Coordinator task cards */
+.task-card { display: flex; flex-direction: column; gap: 10px; border-left: 4px solid var(--navy); }
+.task-card-overdue { border-left-color: var(--bad-text); }
+.task-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.task-card-title { margin: 0; font-size: 16px; color: var(--navy-dark); line-height: 1.35; word-break: break-word; }
+.task-card-meta { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 13.5px; color: var(--text-muted); }
+.task-card-meta strong { color: var(--text); font-weight: 700; margin-right: 4px; }
+.task-card-meta .task-overdue strong { color: var(--bad-text); }
+.task-overdue-pill { margin-left: 8px; vertical-align: middle; }
+.task-card-desc { margin: 0; font-size: 14px; color: var(--text); white-space: pre-wrap; word-break: break-word; background: var(--muted-bg); border-radius: 10px; padding: 10px 12px; }
+.task-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.task-status-switch { margin-bottom: 0; }
+.task-status-switch .segmented-btn:disabled { opacity: 0.6; cursor: wait; }
+.task-card .task-thread-wrap { margin-top: 0; }
+
 /* Profile */
 .profile-header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
 .profile-header h1 { margin-bottom: 6px; }
@@ -244,6 +259,8 @@ form .segmented { margin-bottom: 0; }
   .stat-card:hover { transform: none; }
 
   .segmented { display: flex; width: 100%; }
+  .task-card-foot { flex-direction: column; align-items: stretch; }
+  .task-card-meta { flex-direction: column; }
   .segmented-btn { flex: 1; padding: 9px 10px; }
 
   .day-window-row { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto; gap: 4px; }
