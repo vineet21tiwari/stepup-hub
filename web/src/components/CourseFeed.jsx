@@ -8,7 +8,7 @@ import { StudentSubmission, TeacherSubmissions } from "./AssignmentSubmissions";
 
 const TYPE_FILTERS = [
   { key: "ALL", label: "All" },
-  { key: "POST", label: "Posts" },
+  { key: "POST", label: "Class Summaries" },
   { key: "ANNOUNCEMENT", label: "Announcements" },
   { key: "ASSIGNMENT", label: "Assignments" },
 ];
@@ -91,7 +91,7 @@ function Composer({ courseId, canManage, onPosted }) {
       {canManage && (
         <div className="btn-group feed-composer-tabs">
           {[
-            ["POST", "Post"],
+            ["POST", "Class Summary"],
             ["ANNOUNCEMENT", "Announcement"],
             ["ASSIGNMENT", "Assignment"],
           ].map(([key, label]) => (
@@ -114,13 +114,13 @@ function Composer({ courseId, canManage, onPosted }) {
             rows="3"
             required
             maxLength={2000}
-            placeholder="Share something with this course..."
+            placeholder="Write a summary of the class..."
             value={postText}
             onChange={(e) => setPostText(e.target.value)}
           />
           <div className="feed-composer-actions">
             <button className="btn btn-primary btn-sm" type="submit" disabled={busy || !postText.trim()}>
-              {busy ? "Posting..." : "Post"}
+              {busy ? "Posting..." : "Post summary"}
             </button>
           </div>
         </form>
@@ -200,7 +200,7 @@ function PostItem({ post, canDelete, onLike, onDelete }) {
   return (
     <div className="card feed-item">
       <div className="feed-item-head">
-        <span className="pill">Post</span>
+        <span className="pill">Class Summary</span>
         <strong>{post.authorName}</strong>
         <span className="pill role-pill small">{post.authorRole}</span>
         <span className="feed-item-time">{fmtDateTime(post.createdAt)}</span>

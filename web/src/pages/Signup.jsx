@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import logo from "../assets/logo.png";
 import { roleHome } from "../utils/roleHome";
 import ThemeToggle from "../components/ThemeToggle";
+import PasswordInput from "../components/PasswordInput";
 
 // Coordinator and Admin accounts are created by an admin (see AdminUsers) — not self-signup.
 const EXTRA_LABEL = {
@@ -79,10 +80,10 @@ export default function Signup() {
             </div>
           </div>
           <label>Password</label>
-          <input
-            type="password"
+          <PasswordInput
             required
             minLength={6}
+            autoComplete="new-password"
             value={form.password}
             onChange={(e) => update("password", e.target.value)}
           />

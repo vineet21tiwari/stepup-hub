@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { fmtTimeRange } from "../utils/format";
 import MeetingPanel from "../components/MeetingPanel";
 import AttendancePanel from "../components/AttendancePanel";
+import ClassChangePanel from "../components/ClassChangePanel";
 
 export default function SessionDetail() {
   const { id } = useParams();
@@ -97,6 +98,10 @@ export default function SessionDetail() {
               <li key={s.id}>{s.name}</li>
             ))}
           </ul>
+          <div className="assign-coordinator">
+            <p className="card-sub course-side-label">Change or cancel</p>
+            <ClassChangePanel session={session} onApplied={load} />
+          </div>
           <div className="assign-coordinator">
             <p className="card-sub course-side-label">Attendance</p>
             <AttendancePanel session={session} onChanged={setSession} />

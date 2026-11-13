@@ -42,8 +42,17 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
+  // Saves the user's own profile. The server returns a fresh token (it changes with the email).
+  async function updateProfile(payload) {
+    const res = await UserApi.updateMe(payload);
+    if (res.token) localStorage.setItem("stepup_token", res.token);
+    const me = await UserApi.me();
+    setUser(me);
+    return me;
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, setUser }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout, setUser, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

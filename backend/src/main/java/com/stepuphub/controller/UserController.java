@@ -2,7 +2,9 @@ package com.stepuphub.controller;
 
 import com.stepuphub.domain.Role;
 import com.stepuphub.domain.User;
+import com.stepuphub.dto.AuthResponse;
 import com.stepuphub.dto.CreateUserRequest;
+import com.stepuphub.dto.ProfileUpdateRequest;
 import com.stepuphub.dto.PasswordResetResultDto;
 import com.stepuphub.dto.UserSummaryDto;
 import com.stepuphub.dto.UserUpdateRequest;
@@ -31,6 +33,13 @@ public class UserController {
     @GetMapping("/me")
     public UserSummaryDto me(@AuthenticationPrincipal AppUserPrincipal principal) {
         return UserSummaryDto.from(principal.getUser());
+    }
+
+    // Any user edits their own profile (and optionally password). Returns a new token.
+    @PutMapping("/me")
+    public AuthResponse updateMe(@AuthenticationPrincipal AppUserPrincipal principal,
+                                 @Valid @RequestBody ProfileUpdateRequest req) {
+        return userService.updateOwnProfile(principal.getId(), req);
     }
 
     // Lets a teacher who skipped the resume at signup add/replace one later.

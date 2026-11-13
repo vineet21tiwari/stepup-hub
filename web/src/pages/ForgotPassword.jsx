@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { AuthApi } from "../api/endpoints";
 import logo from "../assets/logo.png";
 import ThemeToggle from "../components/ThemeToggle";
+import PasswordInput from "../components/PasswordInput";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -52,22 +53,20 @@ export default function ForgotPassword() {
             <label>Email</label>
             <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
             <label>New password</label>
-            <input
-              type="password"
+            <PasswordInput
               required
               minLength={6}
+              autoComplete="new-password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="••••••••"
             />
             <label>Confirm new password</label>
-            <input
-              type="password"
+            <PasswordInput
               required
               minLength={6}
+              autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="••••••••"
             />
             <button className="btn btn-primary btn-block" type="submit" disabled={busy}>
               {busy ? "Resetting..." : "Reset password"}

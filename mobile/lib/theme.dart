@@ -103,6 +103,37 @@ ThemeData buildAppTheme({required Brightness brightness}) {
       elevation: 12,
       selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11.5),
     ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: dark ? kSurfaceDark : Colors.white,
+      surfaceTintColor: Colors.transparent,
+      elevation: 8,
+      shadowColor: Colors.black26,
+      labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+            fontSize: 11.5,
+            fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w600,
+            color: states.contains(WidgetState.selected) ? kOrangeDark : (dark ? Colors.white60 : Colors.black54),
+          )),
+      iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
+            color: states.contains(WidgetState.selected) ? kOrangeDark : (dark ? Colors.white60 : Colors.black54),
+          )),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: kOrange,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+        textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kRadiusSm)),
+      ),
+    ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: SegmentedButton.styleFrom(
+        selectedBackgroundColor: kOrange.withValues(alpha: 0.18),
+        selectedForegroundColor: dark ? Colors.white : kNavyDark,
+        textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+      ),
+    ),
+    listTileTheme: const ListTileThemeData(contentPadding: EdgeInsets.symmetric(horizontal: 12)),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kRadiusSm)),

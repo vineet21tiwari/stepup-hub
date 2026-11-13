@@ -39,6 +39,15 @@ class AuthState extends ChangeNotifier {
     return user!;
   }
 
+  /// Saves the user's own profile; stores the fresh token the server returns (it changes with the email).
+  Future<void> updateProfile(Map<String, dynamic> payload) async {
+    final res = await UserApi.updateMe(payload);
+    final token = res['token'];
+    if (token is String) await ApiClient.setToken(token);
+    user = await UserApi.me();
+    notifyListeners();
+  }
+
   Future<void> refreshMe() async {
     user = await UserApi.me();
     notifyListeners();

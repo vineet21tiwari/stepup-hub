@@ -79,6 +79,45 @@ public class TaskService {
         return TaskDto.from(saved);
     }
 
+    // Admin edits a task: title/description/course/coordinator/deadline. Reassigning to a different
+    // coordinator notifies the new one; otherwise the current coordinator hears about the change.
+    @Transactional
+    public TaskDto update(Long adminId, Long taskId, TaskRequest req) {
+        User admin = requireUser(adminId);
+        if (admin.getRole() != Role.ADMIN) throw new IllegalArgumentException("Only admins can edit tasks");
+        Task task = requireTask(taskId);
+        User coordinator = userRepository.findById(req.getCoordinatorId())
+                .orElseThrow(() -> new IllegalArgumentException("Coordinator not found"));
+        if (coordinator.getRole() != Role.COORDINATOR) throw new IllegalArgumentException("User is not a coordinator");
+        boolean reassigned = !coordinator.getId().equals(task.getCoordinator().getId());
+
+        task.setTitle(req.getTitle());
+        task.setDescription(req.getDescription());
+        task.setCoordinator(coordinator);
+        task.setDeadline(req.getDeadline());
+        task.setCourse(req.getCourseId() == null ? null : courseRepository.findById(req.getCourseId())
+                .orElseThrow(() -> new IllegalArgumentException("Course not found")));
+        Task saved = taskRepository.save(task);
+
+        String deadlineStr = DateTimeFormatter.ofPattern("MMM d, h:mm a").withZone(AppTime.ZONE).format(saved.getDeadline());
+        notificationService.notify(coordinator, Notification.NotificationType.GENERAL,
+                (reassigned ? "New task \"" : "Task updated: \"") + saved.getTitle() + "\" — due " + deadlineStr,
+                "TASK:" + saved.getId());
+        return TaskDto.from(saved);
+    }
+
+    // Admin deletes a task along with its message thread.
+    @Transactional
+    public void delete(Long adminId, Long taskId) {
+        User admin = requireUser(adminId);
+        if (admin.getRole() != Role.ADMIN) throw new IllegalArgumentException("Only admins can delete tasks");
+        Task task = requireTask(taskId);
+        taskMessageRepository.deleteAll(taskMessageRepository.findByTaskIdOrderBySentAtAsc(taskId));
+        notificationService.notify(task.getCoordinator(), Notification.NotificationType.GENERAL,
+                "Task \"" + task.getTitle() + "\" was removed by admin", null);
+        taskRepository.delete(task);
+    }
+
     @Transactional
     public TaskDto updateStatus(Long userId, Long taskId, Task.TaskStatus status) {
         Task task = requireTask(taskId);

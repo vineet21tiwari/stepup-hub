@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../api/endpoints.dart';
 import '../theme.dart';
 import '../widgets/attendance_panel.dart';
+import '../widgets/class_change_panel.dart';
 import '../widgets/course_chat.dart';
 import '../widgets/common.dart';
 import '../widgets/course_feed.dart';
@@ -194,6 +195,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
           ]),
           MeetingPanelWidget(session: s, onChanged: _replaceSession, onRefresh: _refreshSessions),
           AttendancePanelWidget(session: s, onChanged: _replaceSession),
+          ClassChangePanel(session: s, onApplied: _refreshSessions),
         ],
       ),
     );

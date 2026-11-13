@@ -35,6 +35,17 @@ public class TaskController {
                 : taskService.listForCoordinator(principal.getId());
     }
 
+    @PutMapping("/{id}")
+    public TaskDto update(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
+                          @Valid @RequestBody TaskRequest req) {
+        return taskService.update(principal.getId(), id, req);
+    }
+
+    @DeleteMapping("/{id}")
+    public void delete(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id) {
+        taskService.delete(principal.getId(), id);
+    }
+
     @PutMapping("/{id}/status")
     public TaskDto updateStatus(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
                                  @Valid @RequestBody TaskStatusRequest req) {

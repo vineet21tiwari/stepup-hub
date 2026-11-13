@@ -13,10 +13,13 @@ import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Comparator;
+import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -31,6 +34,7 @@ public class TeacherService {
     private final TeacherCourseEnrollmentRepository tceRepository;
     private final SlotRepository slotRepository;
     private final ClassSessionRepository classSessionRepository;
+    private final EnrollmentRequestRepository enrollmentRequestRepository;
     private final NotificationService notificationService;
     private final FileStorageService fileStorageService;
 
@@ -153,8 +157,10 @@ public class TeacherService {
             throw new IllegalArgumentException("Slot end time must be after start time");
         }
 
-        if (slotRepository.findFirstByTeacherIdAndCourseIdAndCancelledFalse(teacherId, req.getCourseId()).isPresent()) {
-            throw new IllegalArgumentException("You already have an active slot for this course. Edit it instead of creating a new one.");
+        boolean clash = slotRepository.findByTeacherIdAndCancelledFalse(teacherId).stream()
+                .anyMatch(s -> s.getStartTime().isBefore(req.getEndTime()) && req.getStartTime().isBefore(s.getEndTime()));
+        if (clash) {
+            throw new IllegalArgumentException("You already have a slot overlapping this time");
         }
 
         Slot slot = new Slot();
@@ -166,8 +172,19 @@ public class TeacherService {
         return SlotDto.from(slotRepository.save(slot));
     }
 
-    // Edits the teacher's single active slot for a course (time and/or capacity) instead of
-    // replacing it with a new row, since only one active slot per teacher/course is allowed.
+    // A slot counts as "taken" once a student has an approved booking OR a still-pending request on it —
+    // the teacher can no longer move or remove it (only an admin can, see adminCancelSlotSeries).
+    private boolean isTaken(Slot slot) {
+        return slot.getBookedCount() > 0 || !enrollmentRequestRepository
+                .findBySlotIdAndStatusIn(slot.getId(), List.of(RequestStatus.PENDING_TEACHER, RequestStatus.PENDING_ADMIN))
+                .isEmpty();
+    }
+
+    private static final DateTimeFormatter WHEN = DateTimeFormatter.ofPattern("EEE, MMM d h:mm a").withZone(AppTime.ZONE);
+    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("h:mm a").withZone(AppTime.ZONE);
+
+    // Edits one of the teacher's slots (time and/or capacity). Only allowed while nobody has booked it;
+    // students with a pending request on it are notified of the new time.
     @Transactional
     public SlotDto updateSlot(Long teacherId, Long slotId, SlotRequest req) {
         Slot slot = slotRepository.findById(slotId).orElseThrow(() -> new IllegalArgumentException("Slot not found"));
@@ -177,24 +194,43 @@ public class TeacherService {
         if (slot.isCancelled()) {
             throw new IllegalArgumentException("Cannot edit a cancelled slot");
         }
+        if (slot.getBookedCount() > 0) {
+            throw new IllegalArgumentException("This slot is already booked by a student and can't be changed. "
+                    + "Raise a change request from the class instead.");
+        }
         if (!req.getEndTime().isAfter(req.getStartTime())) {
             throw new IllegalArgumentException("Slot end time must be after start time");
         }
         int capacity = req.getCapacity() == null ? slot.getCapacity() : req.getCapacity();
-        if (capacity < slot.getBookedCount()) {
-            throw new IllegalArgumentException("Capacity cannot be lower than the current booked count (" + slot.getBookedCount() + ")");
+        boolean clash = slotRepository.findByTeacherIdAndCancelledFalse(teacherId).stream()
+                .filter(s -> !s.getId().equals(slotId))
+                .anyMatch(s -> s.getStartTime().isBefore(req.getEndTime()) && req.getStartTime().isBefore(s.getEndTime()));
+        if (clash) {
+            throw new IllegalArgumentException("You already have another slot overlapping this time");
         }
 
+        boolean timeChanged = !slot.getStartTime().equals(req.getStartTime()) || !slot.getEndTime().equals(req.getEndTime());
         slot.setStartTime(req.getStartTime());
         slot.setEndTime(req.getEndTime());
         slot.setCapacity(capacity);
-        return SlotDto.from(slotRepository.save(slot));
+        Slot saved = slotRepository.save(slot);
+
+        if (timeChanged) {
+            String when = WHEN.format(saved.getStartTime()) + " - " + TIME.format(saved.getEndTime());
+            enrollmentRequestRepository
+                    .findBySlotIdAndStatusIn(saved.getId(), List.of(RequestStatus.PENDING_TEACHER, RequestStatus.PENDING_ADMIN))
+                    .forEach(r -> notificationService.notify(r.getStudent(), Notification.NotificationType.GENERAL,
+                            saved.getTeacher().getName() + " changed the time of the slot you requested for \""
+                                    + saved.getCourse().getTitle() + "\" to " + when,
+                            "ENROLLMENT_REQUEST:" + r.getId()));
+        }
+        return SlotDto.from(saved);
     }
 
-    // Generates one Slot per hour within each matching weekday's time window, from req.startDate
-    // through req.repeatUntil, all sharing one recurrenceGroupId (see cancelSlotSeries for the
-    // matching bulk-cancel). Slicing into hourly chunks (instead of one block spanning the whole
-    // window) is what lets a student pick a specific hour to book from the calendar.
+    // Generates one Slot per hour within each matching weekday's time window(s), from req.startDate
+    // through req.repeatUntil, all sharing one recurrenceGroupId. A weekday may carry several windows
+    // (e.g. Monday 9-10 AM and 3-4 PM) as long as they don't overlap. Hours the teacher already offers
+    // (in any course) are skipped rather than doubled up.
     @Transactional
     public List<SlotDto> createRecurringSlots(Long teacherId, RecurringSlotRequest req) {
         User teacher = requireRole(teacherId, Role.TEACHER);
@@ -208,60 +244,69 @@ public class TeacherService {
         if (req.getRepeatUntil().isBefore(req.getStartDate())) {
             throw new IllegalArgumentException("repeatUntil must be on or after the start date");
         }
-        if (slotRepository.findFirstByTeacherIdAndCourseIdAndCancelledFalse(teacherId, req.getCourseId()).isPresent()) {
-            throw new IllegalArgumentException("You already have an active slot for this course. Cancel it before creating a recurring series.");
-        }
 
-        Set<DayOfWeek> seenDays = new HashSet<>();
+        Map<DayOfWeek, List<RecurringSlotRequest.DayWindow>> byDay = new EnumMap<>(DayOfWeek.class);
         for (RecurringSlotRequest.DayWindow w : req.getDayWindows()) {
             if (!w.getEndTime().isAfter(w.getStartTime())) {
                 throw new IllegalArgumentException("End time must be after start time for " + w.getDayOfWeek());
             }
-            if (!seenDays.add(w.getDayOfWeek())) {
-                throw new IllegalArgumentException("Duplicate time window for " + w.getDayOfWeek());
+            byDay.computeIfAbsent(w.getDayOfWeek(), k -> new ArrayList<>()).add(w);
+        }
+        for (Map.Entry<DayOfWeek, List<RecurringSlotRequest.DayWindow>> e : byDay.entrySet()) {
+            e.getValue().sort(Comparator.comparing(RecurringSlotRequest.DayWindow::getStartTime));
+            List<RecurringSlotRequest.DayWindow> ws = e.getValue();
+            for (int i = 1; i < ws.size(); i++) {
+                if (ws.get(i).getStartTime().isBefore(ws.get(i - 1).getEndTime())) {
+                    throw new IllegalArgumentException("Time slots overlap on " + e.getKey());
+                }
             }
         }
         int classesPerWeek = req.getClassesPerWeek();
-        if (classesPerWeek < 1 || classesPerWeek > req.getDayWindows().size()) {
-            throw new IllegalArgumentException("classesPerWeek must be between 1 and the number of days offered (" + req.getDayWindows().size() + ")");
+        if (classesPerWeek < 1 || classesPerWeek > byDay.size()) {
+            throw new IllegalArgumentException("classesPerWeek must be between 1 and the number of days offered (" + byDay.size() + ")");
         }
 
         int capacity = req.getCapacity() == null ? 1 : req.getCapacity();
         SessionType sessionType = req.getSessionType() == null ? SessionType.ONE_ON_ONE : req.getSessionType();
         String groupId = UUID.randomUUID().toString();
 
+        List<Slot> existing = slotRepository.findByTeacherIdAndCancelledFalse(teacherId);
+
         List<Slot> created = new ArrayList<>();
         for (LocalDate date = req.getStartDate(); !date.isAfter(req.getRepeatUntil()); date = date.plusDays(1)) {
-            LocalDate d = date;
-            RecurringSlotRequest.DayWindow window = req.getDayWindows().stream()
-                    .filter(w -> w.getDayOfWeek() == d.getDayOfWeek())
-                    .findFirst().orElse(null);
-            if (window == null) continue;
+            List<RecurringSlotRequest.DayWindow> windows = byDay.get(date.getDayOfWeek());
+            if (windows == null) continue;
 
-            for (LocalTime hourStart = window.getStartTime();
-                 hourStart.isBefore(window.getEndTime());
-                 hourStart = hourStart.plusHours(1)) {
-                LocalTime hourEnd = hourStart.plusHours(1);
-                if (hourEnd.isAfter(window.getEndTime()) || hourEnd.equals(LocalTime.MIDNIGHT)) {
-                    hourEnd = window.getEndTime();
+            for (RecurringSlotRequest.DayWindow window : windows) {
+                LocalTime hourStart = window.getStartTime();
+                while (hourStart.isBefore(window.getEndTime())) {
+                    LocalTime hourEnd = hourStart.plusHours(1);
+                    boolean last = hourEnd.isAfter(window.getEndTime()) || !hourEnd.isAfter(hourStart);
+                    if (last) hourEnd = window.getEndTime();
+
+                    Instant occStart = date.atTime(hourStart).atZone(AppTime.ZONE).toInstant();
+                    Instant occEnd = date.atTime(hourEnd).atZone(AppTime.ZONE).toInstant();
+                    boolean clash = existing.stream().anyMatch(s ->
+                            s.getStartTime().isBefore(occEnd) && occStart.isBefore(s.getEndTime()));
+                    if (!clash) {
+                        Slot slot = new Slot();
+                        slot.setTeacher(teacher);
+                        slot.setCourse(course);
+                        slot.setStartTime(occStart);
+                        slot.setEndTime(occEnd);
+                        slot.setCapacity(capacity);
+                        slot.setSessionType(sessionType);
+                        slot.setClassesPerWeek(classesPerWeek);
+                        slot.setRecurrenceGroupId(groupId);
+                        created.add(slotRepository.save(slot));
+                    }
+                    if (last || hourEnd.equals(window.getEndTime())) break;
+                    hourStart = hourEnd;
                 }
-
-                Instant occStart = date.atTime(hourStart).atZone(AppTime.ZONE).toInstant();
-                Instant occEnd = date.atTime(hourEnd).atZone(AppTime.ZONE).toInstant();
-                Slot slot = new Slot();
-                slot.setTeacher(teacher);
-                slot.setCourse(course);
-                slot.setStartTime(occStart);
-                slot.setEndTime(occEnd);
-                slot.setCapacity(capacity);
-                slot.setSessionType(sessionType);
-                slot.setClassesPerWeek(classesPerWeek);
-                slot.setRecurrenceGroupId(groupId);
-                created.add(slotRepository.save(slot));
             }
         }
         if (created.isEmpty()) {
-            throw new IllegalArgumentException("No occurrences matched the given days of week within the date range");
+            throw new IllegalArgumentException("No new slots were created — the chosen days/times don't fall in the date range or overlap your existing slots");
         }
         return created.stream().map(SlotDto::from).toList();
     }
@@ -279,9 +324,10 @@ public class TeacherService {
                 .toList();
     }
 
-    // Bulk-cancels every still-active slot generated from one createRecurringSlots call.
+    // Teacher removes the EMPTY slots of a series. Slots a student has booked or requested stay put —
+    // only an admin can cancel those (adminCancelSlotSeries).
     @Transactional
-    public void cancelSlotSeries(Long teacherId, String recurrenceGroupId) {
+    public SeriesCancelResultDto cancelSlotSeries(Long teacherId, String recurrenceGroupId) {
         List<Slot> slots = slotRepository.findByRecurrenceGroupIdAndCancelledFalse(recurrenceGroupId);
         if (slots.isEmpty()) {
             throw new IllegalArgumentException("No active slots found for this series");
@@ -291,8 +337,77 @@ public class TeacherService {
                 throw new IllegalArgumentException("Not your slot series");
             }
         }
-        slots.forEach(s -> s.setCancelled(true));
+        List<Slot> empty = slots.stream().filter(s -> !isTaken(s)).toList();
+        int kept = slots.size() - empty.size();
+        if (empty.isEmpty()) {
+            throw new IllegalArgumentException("Every slot in this series is booked or requested by a student — only an admin can cancel booked slots");
+        }
+        empty.forEach(s -> s.setCancelled(true));
+        slotRepository.saveAll(empty);
+        return new SeriesCancelResultDto(empty.size(), kept, 0);
+    }
+
+    // Admin cancels a whole series, booked slots included: pending requests are declined, upcoming
+    // scheduled classes are cancelled, and every affected student plus the teacher is notified.
+    @Transactional
+    public SeriesCancelResultDto adminCancelSlotSeries(Long adminId, String recurrenceGroupId) {
+        requireRole(adminId, Role.ADMIN);
+        List<Slot> slots = slotRepository.findByRecurrenceGroupIdAndCancelledFalse(recurrenceGroupId);
+        if (slots.isEmpty()) {
+            throw new IllegalArgumentException("No active slots found for this series");
+        }
+        int booked = 0;
+        Map<Long, User> affectedStudents = new LinkedHashMap<>();
+        Instant now = Instant.now();
+        for (Slot slot : slots) {
+            if (isTaken(slot)) booked++;
+            slot.setCancelled(true);
+            List<EnrollmentRequest> pending = enrollmentRequestRepository.findBySlotIdAndStatusIn(slot.getId(),
+                    List.of(RequestStatus.PENDING_TEACHER, RequestStatus.PENDING_ADMIN));
+            for (EnrollmentRequest r : pending) {
+                r.setStatus(RequestStatus.REJECTED_BY_ADMIN);
+                r.setAdminNote("Slot series cancelled by admin");
+                r.setDecidedAt(now);
+                affectedStudents.put(r.getStudent().getId(), r.getStudent());
+            }
+            enrollmentRequestRepository.saveAll(pending);
+            for (ClassSession cs : classSessionRepository.findBySlotId(slot.getId())) {
+                if (cs.getStatus() == ClassSession.SessionStatus.SCHEDULED && cs.getScheduledStart().isAfter(now)) {
+                    cs.setStatus(ClassSession.SessionStatus.CANCELLED);
+                    cs.getStudents().forEach(st -> affectedStudents.put(st.getId(), st));
+                    classSessionRepository.save(cs);
+                }
+            }
+        }
         slotRepository.saveAll(slots);
+
+        Slot first = slots.get(0);
+        String msg = "Admin cancelled the class series for \"" + first.getCourse().getTitle() + "\" with "
+                + first.getTeacher().getName() + ". Upcoming classes in this series won't take place.";
+        affectedStudents.values().forEach(st ->
+                notificationService.notify(st, Notification.NotificationType.SESSION_CANCELLED, msg, null));
+        notificationService.notify(first.getTeacher(), Notification.NotificationType.SESSION_CANCELLED,
+                "Admin cancelled your slot series for \"" + first.getCourse().getTitle() + "\" (" + slots.size() + " slots)", null);
+        return new SeriesCancelResultDto(slots.size(), 0, booked);
+    }
+
+    // Admin overview: every active slot series, grouped, with how many of its slots are booked.
+    @Transactional(readOnly = true)
+    public List<SlotSeriesDto> allActiveSeries() {
+        Map<String, List<Slot>> groups = new LinkedHashMap<>();
+        slotRepository.findByCancelledFalseAndRecurrenceGroupIdIsNotNull()
+                .forEach(s -> groups.computeIfAbsent(s.getRecurrenceGroupId(), k -> new ArrayList<>()).add(s));
+        List<SlotSeriesDto> out = new ArrayList<>();
+        groups.forEach((gid, list) -> {
+            list.sort(Comparator.comparing(Slot::getStartTime));
+            Slot f = list.get(0);
+            int booked = (int) list.stream().filter(s -> s.getBookedCount() > 0).count();
+            out.add(new SlotSeriesDto(gid, f.getTeacher().getId(), f.getTeacher().getName(),
+                    f.getCourse().getId(), f.getCourse().getTitle(), f.getSessionType().name(),
+                    list.size(), booked, f.getStartTime(), list.get(list.size() - 1).getStartTime()));
+        });
+        out.sort(Comparator.comparing(SlotSeriesDto::firstStart));
+        return out;
     }
 
     @Transactional(readOnly = true)
@@ -306,11 +421,15 @@ public class TeacherService {
         return slotRepository.findByTeacherIdAndCancelledFalse(teacherId).stream().map(SlotDto::from).toList();
     }
 
+    // Teacher removes one slot — only while it's empty (no booking and no pending request).
     @Transactional
     public void cancelSlot(Long teacherId, Long slotId) {
         Slot slot = slotRepository.findById(slotId).orElseThrow(() -> new IllegalArgumentException("Slot not found"));
         if (!slot.getTeacher().getId().equals(teacherId)) {
             throw new IllegalArgumentException("Not your slot");
+        }
+        if (isTaken(slot)) {
+            throw new IllegalArgumentException("A student has booked or requested this slot — it can't be removed. Contact admin if it must be cancelled.");
         }
         slot.setCancelled(true);
         slotRepository.save(slot);

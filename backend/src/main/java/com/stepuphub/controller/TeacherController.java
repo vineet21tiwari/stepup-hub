@@ -91,9 +91,22 @@ public class TeacherController {
         return teacherService.createRecurringSlots(principal.getId(), req);
     }
 
+    // Teacher: removes only the empty (unbooked, unrequested) slots of the series.
     @DeleteMapping("/slots/series/{recurrenceGroupId}")
-    public void cancelSlotSeries(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable String recurrenceGroupId) {
-        teacherService.cancelSlotSeries(principal.getId(), recurrenceGroupId);
+    public SeriesCancelResultDto cancelSlotSeries(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable String recurrenceGroupId) {
+        return teacherService.cancelSlotSeries(principal.getId(), recurrenceGroupId);
+    }
+
+    // Admin: every active slot series across all teachers.
+    @GetMapping("/slots/series")
+    public List<SlotSeriesDto> allSeries() {
+        return teacherService.allActiveSeries();
+    }
+
+    // Admin: cancels the whole series, booked slots included (classes cancelled, students notified).
+    @DeleteMapping("/slots/series/{recurrenceGroupId}/admin")
+    public SeriesCancelResultDto adminCancelSlotSeries(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable String recurrenceGroupId) {
+        return teacherService.adminCancelSlotSeries(principal.getId(), recurrenceGroupId);
     }
 
     @GetMapping("/slots/mine")

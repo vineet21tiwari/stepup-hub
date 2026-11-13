@@ -19,7 +19,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _busy = false;
-  bool _obscure = true;
   String? _error;
 
   Future<void> _submit() async {
@@ -73,7 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Image.asset('assets/logo.png', height: 64),
+                  const BrandLogo(size: 96),
                   const SizedBox(height: 14),
                   const Text('Welcome back', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
                   const Text('Step Up in Studies, Step Ahead with Confidence',
@@ -82,23 +81,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (_error != null) InfoBanner.error(_error!),
                   TextFormField(
                     controller: _email,
-                    decoration: const InputDecoration(labelText: 'Email'),
+                    decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.mail_outline, size: 20)),
                     keyboardType: TextInputType.emailAddress,
                     validator: (v) => (v == null || v.isEmpty) ? 'Email is required' : null,
                   ),
                   const SizedBox(height: 12),
-                  TextFormField(
+                  PasswordField(
                     controller: _password,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      suffixIcon: IconButton(
-                        icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility, size: 20),
-                        onPressed: () => setState(() => _obscure = !_obscure),
-                      ),
-                    ),
-                    obscureText: _obscure,
                     validator: (v) => (v == null || v.isEmpty) ? 'Password is required' : null,
-                    onFieldSubmitted: (_) => _submit(),
+                    onSubmitted: (_) => _submit(),
                   ),
                   Align(
                     alignment: Alignment.centerRight,

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { SessionApi } from "../api/endpoints";
+import { useAuth } from "../context/AuthContext";
 import { fmtTimeRange } from "../utils/format";
 
 // One card per course (not per class instance, and not every past/future session listed) —
@@ -22,6 +23,7 @@ function groupByCourse(sessions) {
 }
 
 export default function Sessions() {
+  const { user } = useAuth();
   const [sessions, setSessions] = useState([]);
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export default function Sessions() {
 
   return (
     <div className="page">
-      <h1>My classes</h1>
+      <h1>{user?.role === "ADMIN" ? "Classes" : "My classes"}</h1>
       <p className="page-subtitle">Pick a course to see its full class calendar and join your next class.</p>
       {courses.length === 0 && <p className="empty-state">No scheduled classes yet.</p>}
       <div className="card-list">

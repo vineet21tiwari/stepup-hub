@@ -5,6 +5,7 @@ import { sameDay, toDateInputValue } from "../utils/date";
 import MonthCalendar from "./MonthCalendar";
 import MeetingPanel from "./MeetingPanel";
 import AttendancePanel from "./AttendancePanel";
+import ClassChangePanel from "./ClassChangePanel";
 
 // The current user's classes for one course: a "join your class" popup for whichever class is
 // happening now or next, a month calendar with class days highlighted, and the selected day's
@@ -91,6 +92,7 @@ export default function CourseClasses({ courseId }) {
             </div>
             <MeetingPanel session={s} onChanged={load} onRefresh={load} />
             <AttendancePanel session={s} onChanged={load} />
+            <ClassChangePanel session={s} onApplied={load} />
           </div>
         ))}
       </div>

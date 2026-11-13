@@ -16,4 +16,5 @@ public interface EnrollmentRequestRepository extends JpaRepository<EnrollmentReq
     List<EnrollmentRequest> findByStudentIdAndStatusIn(Long studentId, List<RequestStatus> statuses);
     // Used to approve/reject an entire weekly-commitment submission as one unit.
     List<EnrollmentRequest> findByBatchId(String batchId);
+    List<EnrollmentRequest> findBySlotIdAndStatusIn(Long slotId, List<RequestStatus> statuses);
 }

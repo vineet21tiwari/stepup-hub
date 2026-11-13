@@ -23,7 +23,8 @@ public record ClassSessionDto(Long id, Long courseId, String courseTitle, Long t
                                String sessionType, List<UserSummaryDto> students,
                                String meetingLink, String meetingProvider, boolean hasMeetingLink,
                                Instant joinOpensAt, Instant actualStart, Instant actualEnd,
-                               Long durationMinutes, Boolean teacherPresent, List<StudentAttendanceDto> attendance) {
+                               Long durationMinutes, Boolean teacherPresent, List<StudentAttendanceDto> attendance,
+                               boolean changeAllowed) {
     public static ClassSessionDto from(ClassSession s, String visibleMeetingLink, Instant joinOpensAt,
                                         List<StudentAttendanceDto> attendance) {
         Long durationMinutes = (s.getActualStart() != null && s.getActualEnd() != null)
@@ -36,7 +37,8 @@ public record ClassSessionDto(Long id, Long courseId, String courseTitle, Long t
                 s.getStudents().stream().map(UserSummaryDto::from).collect(Collectors.toList()),
                 visibleMeetingLink, MeetingLinks.providerOf(s.getMeetingLink()),
                 s.getMeetingLink() != null && !s.getMeetingLink().isBlank(),
-                joinOpensAt, s.getActualStart(), s.getActualEnd(), durationMinutes, s.getTeacherPresent(), attendance
+                joinOpensAt, s.getActualStart(), s.getActualEnd(), durationMinutes, s.getTeacherPresent(), attendance,
+                com.stepuphub.service.SessionChangeService.changeAllowed(s)
         );
     }
 }

@@ -32,8 +32,12 @@ import AdminTasks from "./pages/admin/AdminTasks";
 import AdminBookingApprovals from "./pages/admin/AdminBookingApprovals";
 import AdminAnnouncements from "./pages/admin/AdminAnnouncements";
 import AdminSiteContent from "./pages/admin/AdminSiteContent";
+import AdminSlotSeries from "./pages/admin/AdminSlotSeries";
+import ChangeRequests from "./pages/ChangeRequests";
+import Profile from "./pages/Profile";
 import { roleHome } from "./utils/roleHome";
 import "./App.css";
+import "./mobile.css";
 
 function RoleRedirect() {
   const { user, loading } = useAuth();
@@ -209,6 +213,31 @@ function Shell() {
             element={
               <ProtectedRoute roles={["ADMIN"]}>
                 <AdminSiteContent />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/slot-series"
+            element={
+              <ProtectedRoute roles={["ADMIN"]}>
+                <AdminSlotSeries />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/change-requests"
+            element={
+              <ProtectedRoute roles={["ADMIN", "TEACHER", "STUDENT"]}>
+                <ChangeRequests />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             }
           />

@@ -32,6 +32,10 @@ class AuthApi {
 class UserApi {
   static Future<Map<String, dynamic>> me() => ApiClient.get('/api/users/me').then(_m);
 
+  // Any user edits their own profile (optionally password). Returns { token, ... }.
+  static Future<Map<String, dynamic>> updateMe(Map<String, dynamic> payload) =>
+      ApiClient.put('/api/users/me', payload).then(_m);
+
   static Future<Map<String, dynamic>> uploadResume(String path) async {
     final res = await ApiClient.multipart('POST', '/api/users/me/resume', files: [ApiFile('resume', path)]);
     return _m(res);
@@ -138,8 +142,13 @@ class TeacherApi {
   static Future<List<dynamic>> busyTimes(int teacherId, String dateStr) =>
       ApiClient.get('/api/teachers/$teacherId/busy', query: {'date': dateStr}).then(_l);
   static Future<void> cancelSlot(int slotId) => ApiClient.delete('/api/teachers/slots/$slotId');
-  static Future<void> cancelSlotSeries(String recurrenceGroupId) =>
-      ApiClient.delete('/api/teachers/slots/series/${Uri.encodeComponent(recurrenceGroupId)}');
+  // Teacher: removes only the EMPTY slots of a series. Returns { cancelled, keptBooked }.
+  static Future<Map<String, dynamic>> cancelSlotSeries(String recurrenceGroupId) =>
+      ApiClient.delete('/api/teachers/slots/series/${Uri.encodeComponent(recurrenceGroupId)}').then(_m);
+  // Admin: all active series, and cancelling one fully (booked slots included).
+  static Future<List<dynamic>> allSeries() => ApiClient.get('/api/teachers/slots/series').then(_l);
+  static Future<Map<String, dynamic>> adminCancelSeries(String recurrenceGroupId) =>
+      ApiClient.delete('/api/teachers/slots/series/${Uri.encodeComponent(recurrenceGroupId)}/admin').then(_m);
 }
 
 class EnrollmentApi {
@@ -166,6 +175,15 @@ class SessionApi {
   // Coordinator (assigned to the course) or admin only.
   static Future<Map<String, dynamic>> markAttendance(int id, Map<String, dynamic> payload) =>
       ApiClient.put('/api/sessions/$id/attendance', payload).then(_m);
+
+  // Reschedule / cancel requests. type: RESCHEDULE | CANCEL.
+  static Future<Map<String, dynamic>> requestChange(int id, Map<String, dynamic> payload) =>
+      ApiClient.post('/api/sessions/$id/change-requests', payload).then(_m);
+  static Future<List<dynamic>> changeRequestsFor(int id) => ApiClient.get('/api/sessions/$id/change-requests').then(_l);
+  static Future<List<dynamic>> myChangeRequests() => ApiClient.get('/api/sessions/change-requests/mine').then(_l);
+  static Future<void> decideChange(int requestId, bool approve, {String? note}) =>
+      ApiClient.post('/api/sessions/change-requests/$requestId/decide', {'approve': approve, 'note': note});
+  static Future<void> withdrawChange(int requestId) => ApiClient.delete('/api/sessions/change-requests/$requestId');
 }
 
 class CourseAccessApi {
@@ -240,6 +258,9 @@ class DirectMessageApi {
 class TaskApi {
   static Future<Map<String, dynamic>> create(Map<String, dynamic> payload) => ApiClient.post('/api/tasks', payload).then(_m);
   static Future<List<dynamic>> mine() => ApiClient.get('/api/tasks/mine').then(_l);
+  static Future<Map<String, dynamic>> update(int id, Map<String, dynamic> payload) =>
+      ApiClient.put('/api/tasks/$id', payload).then(_m);
+  static Future<void> delete(int id) => ApiClient.delete('/api/tasks/$id');
   static Future<Map<String, dynamic>> updateStatus(int id, String status) =>
       ApiClient.put('/api/tasks/$id/status', {'status': status}).then(_m);
   static Future<List<dynamic>> messages(int id) => ApiClient.get('/api/tasks/$id/messages').then(_l);

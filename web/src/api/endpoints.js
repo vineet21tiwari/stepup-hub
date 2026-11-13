@@ -18,6 +18,8 @@ export const AuthApi = {
 
 export const UserApi = {
   me: () => client.get("/api/users/me").then((r) => r.data),
+  // Any user edits their own profile; returns { token, ... } (token changes if the email does).
+  updateMe: (payload) => client.put("/api/users/me", payload).then((r) => r.data),
   // Omit role to get every user, regardless of role — used by the admin Users page.
   byRole: (role) => client.get("/api/users", { params: { role } }).then((r) => r.data),
   update: (id, payload) => client.put(`/api/users/${id}`, payload).then((r) => r.data),
@@ -94,8 +96,13 @@ export const TeacherApi = {
   busyTimes: (teacherId, dateStr) =>
     client.get(`/api/teachers/${teacherId}/busy`, { params: { date: dateStr } }).then((r) => r.data),
   cancelSlot: (slotId) => client.delete(`/api/teachers/slots/${slotId}`).then((r) => r.data),
+  // Teacher: removes only the empty slots of a series; returns { cancelled, keptBooked }.
   cancelSlotSeries: (recurrenceGroupId) =>
     client.delete(`/api/teachers/slots/series/${encodeURIComponent(recurrenceGroupId)}`).then((r) => r.data),
+  // Admin: every active slot series, and cancelling one entirely (booked slots included).
+  allSeries: () => client.get("/api/teachers/slots/series").then((r) => r.data),
+  adminCancelSeries: (recurrenceGroupId) =>
+    client.delete(`/api/teachers/slots/series/${encodeURIComponent(recurrenceGroupId)}/admin`).then((r) => r.data),
 };
 
 export const CoordinatorApi = {
@@ -129,6 +136,13 @@ export const SessionApi = {
   clearMeetingLink: (id) => client.delete(`/api/sessions/${id}/meeting`).then((r) => r.data),
   // Coordinator (assigned to the course) or admin only.
   markAttendance: (id, payload) => client.put(`/api/sessions/${id}/attendance`, payload).then((r) => r.data),
+  // Reschedule / cancel requests. payload: { type: "RESCHEDULE" | "CANCEL", newStart?, newEnd?, reason? }
+  requestChange: (id, payload) => client.post(`/api/sessions/${id}/change-requests`, payload).then((r) => r.data),
+  changeRequestsFor: (id) => client.get(`/api/sessions/${id}/change-requests`).then((r) => r.data),
+  myChangeRequests: () => client.get("/api/sessions/change-requests/mine").then((r) => r.data),
+  decideChange: (requestId, approve, note) =>
+    client.post(`/api/sessions/change-requests/${requestId}/decide`, { approve, note }).then((r) => r.data),
+  withdrawChange: (requestId) => client.delete(`/api/sessions/change-requests/${requestId}`).then((r) => r.data),
 };
 
 // What the current user may see/do on a course page: { member, canManage }.
@@ -186,6 +200,8 @@ export const TaskApi = {
   create: (payload) => client.post("/api/tasks", payload).then((r) => r.data),
   // Role-aware: coordinator sees tasks assigned to them, admin sees tasks they created.
   mine: () => client.get("/api/tasks/mine").then((r) => r.data),
+  update: (id, payload) => client.put(`/api/tasks/${id}`, payload).then((r) => r.data),
+  delete: (id) => client.delete(`/api/tasks/${id}`).then((r) => r.data),
   updateStatus: (id, status) => client.put(`/api/tasks/${id}/status`, { status }).then((r) => r.data),
   messages: (id) => client.get(`/api/tasks/${id}/messages`).then((r) => r.data),
   sendMessage: (id, content, file) => {

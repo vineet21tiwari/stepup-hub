@@ -5,6 +5,8 @@ import 'admin_coordinators_screen.dart';
 import 'admin_site_content_screen.dart';
 import 'admin_tasks_screen.dart';
 import 'admin_users_screen.dart';
+import 'admin_slot_series_screen.dart';
+import '../change_requests_screen.dart';
 
 /// Hub for admin destinations that don't fit the bottom nav bar.
 class AdminMoreScreen extends StatelessWidget {
@@ -16,7 +18,9 @@ class AdminMoreScreen extends StatelessWidget {
       _MoreItem('Users', 'Create accounts, reset passwords, manage access', Icons.people_outline, const AdminUsersScreen()),
       _MoreItem('Coordinators', 'Assign coordinators to courses', Icons.badge_outlined, const AdminCoordinatorsScreen()),
       _MoreItem('Coordinator messages', 'Private chat with each coordinator', Icons.forum_outlined, const AdminCoordinatorChatScreen()),
-      _MoreItem('Tasks', 'Assign deadline-driven tasks to coordinators', Icons.task_outlined, const AdminTasksScreen()),
+      _MoreItem('Tasks', 'Assign, edit or delete coordinator tasks', Icons.task_outlined, const AdminTasksScreen()),
+      _MoreItem('Slot series', "Cancel a teacher's slot series, booked slots included", Icons.event_repeat, const AdminSlotSeriesScreen()),
+      _MoreItem('Class change requests', 'Approve reschedule / cancellation requests', Icons.swap_horiz, const ChangeRequestsScreen()),
       _MoreItem('Announcements', 'Post global or course announcements', Icons.campaign_outlined, const AdminAnnouncementsScreen()),
       _MoreItem('Website content', 'Edit the public pages and testimonials', Icons.web_outlined, const AdminSiteContentScreen()),
     ];

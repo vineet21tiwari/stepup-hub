@@ -2,7 +2,10 @@ package com.stepuphub.service;
 
 import com.stepuphub.domain.Role;
 import com.stepuphub.domain.User;
+import com.stepuphub.dto.AuthResponse;
 import com.stepuphub.dto.CreateUserRequest;
+import com.stepuphub.dto.ProfileUpdateRequest;
+import com.stepuphub.security.JwtUtil;
 import com.stepuphub.dto.PasswordResetResultDto;
 import com.stepuphub.dto.UserSummaryDto;
 import com.stepuphub.dto.UserUpdateRequest;
@@ -30,6 +33,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
     private User requireAdmin(Long adminId) {
         User admin = userRepository.findById(adminId).orElseThrow(() -> new IllegalArgumentException("Admin not found"));
@@ -96,6 +100,39 @@ public class UserService {
             user.setApproved(req.getApproved());
         }
         return UserSummaryDto.from(userRepository.save(user));
+    }
+
+    // Any logged-in user editing their own profile. Returns a fresh token because the JWT subject is
+    // the email — changing it would otherwise invalidate the current session.
+    @Transactional
+    public AuthResponse updateOwnProfile(Long userId, ProfileUpdateRequest req) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("User not found"));
+        String email = req.getEmail().toLowerCase().trim();
+        if (!email.equalsIgnoreCase(user.getEmail())) {
+            userRepository.findByEmail(email).ifPresent(existing -> {
+                if (!existing.getId().equals(userId)) {
+                    throw new IllegalArgumentException("Another account already uses this email");
+                }
+            });
+        }
+        boolean wantsPasswordChange = req.getNewPassword() != null && !req.getNewPassword().isBlank();
+        if (wantsPasswordChange) {
+            if (req.getCurrentPassword() == null || !passwordEncoder.matches(req.getCurrentPassword(), user.getPasswordHash())) {
+                throw new IllegalArgumentException("Current password is incorrect");
+            }
+            if (req.getNewPassword().length() < 6) {
+                throw new IllegalArgumentException("New password must be at least 6 characters");
+            }
+            user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
+        }
+        user.setName(req.getName().trim());
+        user.setEmail(email);
+        user.setPhone(req.getPhone());
+        user.setExtraInfo(req.getExtraInfo());
+        user = userRepository.save(user);
+        String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+        return new AuthResponse(token, user.getId(), user.getName(), user.getEmail(), user.getRole().name(),
+                user.isApproved(), user.getResumeUrl());
     }
 
     @Transactional

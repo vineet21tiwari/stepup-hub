@@ -7,6 +7,10 @@ import '../widgets/course_chat.dart';
 import '../widgets/global_announcements.dart';
 import '../widgets/notifications_sheet.dart';
 import '../widgets/theme_toggle.dart';
+import '../widgets/common.dart';
+import '../theme.dart';
+import 'profile_screen.dart';
+import 'change_requests_screen.dart';
 import 'sessions_screen.dart';
 import 'student/student_home_screen.dart';
 import 'student/browse_courses_screen.dart';
@@ -73,7 +77,8 @@ class _RootShellState extends State<RootShell> {
 
   @override
   Widget build(BuildContext context) {
-    final role = context.watch<AuthState>().role;
+    final auth = context.watch<AuthState>();
+    final role = auth.role;
     final tabs = _tabsForRole(role);
     final index = _index < tabs.length ? _index : 0;
     final unread = _notifications.where((n) => n['read'] != true).length;
@@ -81,9 +86,25 @@ class _RootShellState extends State<RootShell> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Image.asset('assets/logo.png', height: 32),
+        titleSpacing: 12,
+        toolbarHeight: 62,
+        title: Row(children: [
+          const BrandLogo(size: 42),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              Text.rich(
+                const TextSpan(children: [
+                  TextSpan(text: 'StepUp '),
+                  TextSpan(text: 'Hub', style: TextStyle(color: kOrange)),
+                ]),
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, letterSpacing: -0.3),
+              ),
+              Text(tabs[index].label, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
+            ]),
+          ),
+        ]),
         actions: [
-          const Padding(padding: EdgeInsets.only(right: 4), child: ThemeToggle()),
           _badged(Icons.forum_outlined, unreadChats, () async {
             await Navigator.of(context).push(MaterialPageRoute(builder: (_) => CourseChatListScreen(notifications: _notifications)));
             _loadNotifications();
@@ -92,11 +113,19 @@ class _RootShellState extends State<RootShell> {
             await showNotificationsSheet(context, role: role, onChanged: _loadNotifications, onGoToTab: _goToTab);
             _loadNotifications();
           }, 'Notifications'),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => context.read<AuthState>().logout(),
+          Padding(
+            padding: const EdgeInsets.only(right: 10, left: 2),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () => _openAccountSheet(auth),
+              child: UserAvatar(auth.user?['name'], size: 36),
+            ),
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: Theme.of(context).dividerColor),
+        ),
       ),
       body: Column(
         children: [
@@ -109,10 +138,84 @@ class _RootShellState extends State<RootShell> {
           ),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: index,
-        onTap: (i) => setState(() => _index = i),
-        items: tabs.map((t) => BottomNavigationBarItem(icon: Icon(t.icon), label: t.label)).toList(),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: index,
+        height: 66,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        indicatorColor: kOrange.withValues(alpha: 0.18),
+        onDestinationSelected: (i) => setState(() => _index = i),
+        destinations: tabs
+            .map((t) => NavigationDestination(
+                  icon: Icon(t.icon),
+                  selectedIcon: Icon(t.icon, color: kOrangeDark),
+                  label: t.label,
+                ))
+            .toList(),
+      ),
+    );
+  }
+
+  /// Account sheet behind the avatar: profile, change requests, theme, log out.
+  Future<void> _openAccountSheet(AuthState auth) async {
+    final user = auth.user ?? {};
+    final role = auth.role;
+    await showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              UserAvatar(user['name'], size: 52),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(user['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                  Text(user['email'] ?? '', style: const TextStyle(color: Colors.grey, fontSize: 12.5), overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 4),
+                  RolePill(role ?? ''),
+                ]),
+              ),
+            ]),
+            const SizedBox(height: 14),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Edit profile', style: TextStyle(fontWeight: FontWeight.w700)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
+              },
+            ),
+            if (role == 'TEACHER' || role == 'STUDENT' || role == 'ADMIN')
+              ListTile(
+                leading: const Icon(Icons.swap_horiz),
+                title: const Text('Class change requests', style: TextStyle(fontWeight: FontWeight.w700)),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => Scaffold(appBar: AppBar(title: const Text('Change requests')), body: const ChangeRequestsScreen()),
+                  ));
+                },
+              ),
+            const ListTile(
+              leading: Icon(Icons.palette_outlined),
+              title: Text('Theme', style: TextStyle(fontWeight: FontWeight.w700)),
+              trailing: ThemeToggle(),
+            ),
+            const Divider(height: 20),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Color(0xFFC62828)),
+              title: const Text('Log out', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFC62828))),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                context.read<AuthState>().logout();
+              },
+            ),
+          ]),
+        ),
       ),
     );
   }

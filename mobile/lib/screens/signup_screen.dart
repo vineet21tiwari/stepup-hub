@@ -101,10 +101,8 @@ class _SignupScreenState extends State<SignupScreen> {
               const SizedBox(height: 12),
               TextFormField(controller: _phone, decoration: const InputDecoration(labelText: 'Phone')),
               const SizedBox(height: 12),
-              TextFormField(
+              PasswordField(
                 controller: _password,
-                decoration: const InputDecoration(labelText: 'Password'),
-                obscureText: true,
                 validator: (v) => (v == null || v.length < 6) ? 'At least 6 characters' : null,
               ),
               const SizedBox(height: 12),

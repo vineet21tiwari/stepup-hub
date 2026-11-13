@@ -39,13 +39,35 @@ class _AdminTasksScreenState extends State<AdminTasksScreen> {
     });
   }
 
-  Future<void> _openCreate() async {
+  Future<void> _openCreate([Map<String, dynamic>? task]) async {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (context) => _CreateTaskSheet(courses: _courses, coordinators: _coordinators, onCreated: _load),
+      builder: (context) => _CreateTaskSheet(courses: _courses, coordinators: _coordinators, onCreated: _load, task: task),
     );
+  }
+
+  Future<void> _delete(Map<String, dynamic> t) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Delete task?'),
+        content: Text('"${t['title']}" and its messages will be removed.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await TaskApi.delete(t['id']);
+      await _load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
   }
 
   @override
@@ -65,13 +87,33 @@ class _AdminTasksScreenState extends State<AdminTasksScreen> {
                   final t = _tasks[i];
                   return Card(
                     child: ListTile(
-                      title: Row(children: [
-                        Expanded(child: Text(t['title'], style: const TextStyle(fontWeight: FontWeight.w700))),
-                        if (t['courseTitle'] != null) ...[CountPill(t['courseTitle']), const SizedBox(width: 6)],
-                        StatusPill(_statusLabel[t['status']] ?? t['status']),
-                      ]),
-                      subtitle: Text('Assigned to ${t['coordinatorName']}\nDue ${fmtDateTime(t['deadline'])}'),
-                      isThreeLine: true,
+                      contentPadding: const EdgeInsets.fromLTRB(14, 8, 4, 8),
+                      title: Text(t['title'], style: const TextStyle(fontWeight: FontWeight.w800)),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text('Assigned to ${t['coordinatorName']}'),
+                          Text('Due ${fmtDateTime(t['deadline'])}'),
+                          const SizedBox(height: 6),
+                          Wrap(spacing: 6, runSpacing: 6, children: [
+                            StatusPill(_statusLabel[t['status']] ?? t['status']),
+                            if (t['courseTitle'] != null) CountPill(t['courseTitle']),
+                          ]),
+                        ]),
+                      ),
+                      trailing: PopupMenuButton<String>(
+                        onSelected: (v) => v == 'edit' ? _openCreate(Map<String, dynamic>.from(t)) : _delete(Map<String, dynamic>.from(t)),
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(value: 'edit', child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Edit'))),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: ListTile(
+                              leading: Icon(Icons.delete_outline, color: Color(0xFFC62828)),
+                              title: Text('Delete', style: TextStyle(color: Color(0xFFC62828))),
+                            ),
+                          ),
+                        ],
+                      ),
                       onTap: () => Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => Scaffold(
                           appBar: AppBar(title: Text(t['title'])),
@@ -103,7 +145,9 @@ class _CreateTaskSheet extends StatefulWidget {
   final List<dynamic> courses;
   final List<dynamic> coordinators;
   final VoidCallback onCreated;
-  const _CreateTaskSheet({required this.courses, required this.coordinators, required this.onCreated});
+  // When set, the sheet edits this task instead of creating a new one.
+  final Map<String, dynamic>? task;
+  const _CreateTaskSheet({required this.courses, required this.coordinators, required this.onCreated, this.task});
 
   @override
   State<_CreateTaskSheet> createState() => _CreateTaskSheetState();
@@ -118,6 +162,19 @@ class _CreateTaskSheetState extends State<_CreateTaskSheet> {
   bool _busy = false;
   String? _error;
 
+  @override
+  void initState() {
+    super.initState();
+    final t = widget.task;
+    if (t != null) {
+      _title.text = t['title'] ?? '';
+      _description.text = t['description'] ?? '';
+      _courseId = t['courseId'];
+      _coordinatorId = t['coordinatorId'];
+      _deadline = t['deadline'] == null ? null : DateTime.parse(t['deadline']).toLocal();
+    }
+  }
+
   Future<void> _submit() async {
     if (_title.text.trim().isEmpty || _coordinatorId == null || _deadline == null) {
       setState(() => _error = 'Title, coordinator and deadline are required');
@@ -128,13 +185,18 @@ class _CreateTaskSheetState extends State<_CreateTaskSheet> {
       _error = null;
     });
     try {
-      await TaskApi.create({
+      final payload = {
         'title': _title.text.trim(),
         if (_description.text.trim().isNotEmpty) 'description': _description.text.trim(),
         'courseId': _courseId,
         'coordinatorId': _coordinatorId,
         'deadline': _deadline!.toUtc().toIso8601String(),
-      });
+      };
+      if (widget.task != null) {
+        await TaskApi.update(widget.task!['id'], payload);
+      } else {
+        await TaskApi.create(payload);
+      }
       widget.onCreated();
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
@@ -147,12 +209,12 @@ class _CreateTaskSheetState extends State<_CreateTaskSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.of(context).viewInsets.bottom + 20),
+      padding: EdgeInsets.only(left: 20, right: 20, top: 0, bottom: MediaQuery.of(context).viewInsets.bottom + 20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('New task', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          Text(widget.task != null ? 'Edit task' : 'New task', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
           const SizedBox(height: 12),
           if (_error != null) InfoBanner.error(_error!),
           TextField(controller: _title, decoration: const InputDecoration(labelText: 'Title')),
@@ -190,7 +252,7 @@ class _CreateTaskSheetState extends State<_CreateTaskSheet> {
             },
           ),
           const SizedBox(height: 16),
-          FilledButton(onPressed: _busy ? null : _submit, child: Text(_busy ? 'Creating...' : 'Assign task')),
+          FilledButton(onPressed: _busy ? null : _submit, child: Text(_busy ? 'Saving...' : (widget.task != null ? 'Save changes' : 'Assign task'))),
         ],
       ),
     );

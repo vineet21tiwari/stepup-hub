@@ -10,6 +10,7 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
     List<ClassSession> findByTeacherId(Long teacherId);
     List<ClassSession> findByStudents_Id(Long studentId);
     List<ClassSession> findByCourseId(Long courseId);
+    List<ClassSession> findBySlotId(Long slotId);
     // A coordinator's classes are every session under the courses they're assigned to (course-level
     // assignment — see CourseCoordinatorService), not a per-session field anymore.
     List<ClassSession> findByCourseIdIn(List<Long> courseIds);

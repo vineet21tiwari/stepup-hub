@@ -8,7 +8,7 @@ import '../state/auth_state.dart';
 import '../theme.dart';
 import 'common.dart';
 
-const _typeFilters = {'ALL': 'All', 'POST': 'Posts', 'ANNOUNCEMENT': 'Announcements', 'ASSIGNMENT': 'Assignments'};
+const _typeFilters = {'ALL': 'All', 'POST': 'Class Summaries', 'ANNOUNCEMENT': 'Announcements', 'ASSIGNMENT': 'Assignments'};
 
 Future<bool> _confirm(BuildContext context, String title, {String action = 'Delete'}) async {
   final ok = await showDialog<bool>(
@@ -327,7 +327,7 @@ class _ComposerState extends State<_Composer> {
           if (widget.canManage)
             SegmentedButton<String>(
               segments: const [
-                ButtonSegment(value: 'POST', label: Text('Post')),
+                ButtonSegment(value: 'POST', label: Text('Class Summary')),
                 ButtonSegment(value: 'ANNOUNCEMENT', label: Text('Announce')),
                 ButtonSegment(value: 'ASSIGNMENT', label: Text('Assign')),
               ],
@@ -346,7 +346,7 @@ class _ComposerState extends State<_Composer> {
               maxLength: 2000,
               // Rebuild so the Post button enables as soon as there's text.
               onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(hintText: 'Share something with this course...'),
+              decoration: const InputDecoration(hintText: 'Write a summary of the class...'),
             ),
             Align(
               alignment: Alignment.centerRight,
@@ -357,7 +357,7 @@ class _ComposerState extends State<_Composer> {
                           await PostApi.create(widget.courseId, _postText.text.trim());
                           _postText.clear();
                         }),
-                child: Text(_busy ? 'Posting...' : 'Post'),
+                child: Text(_busy ? 'Posting...' : 'Post summary'),
               ),
             ),
           ] else if (_mode == 'ANNOUNCEMENT') ...[
@@ -498,7 +498,7 @@ class _PostCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _FeedHead(kind: 'Post', name: post['authorName'], role: post['authorRole'], createdAt: post['createdAt']),
+          _FeedHead(kind: 'Class Summary', name: post['authorName'], role: post['authorRole'], createdAt: post['createdAt']),
           const SizedBox(height: 6),
           Text(post['content'] ?? ''),
           const SizedBox(height: 8),

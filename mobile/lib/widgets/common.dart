@@ -243,3 +243,93 @@ class SectionHeader extends StatelessWidget {
     );
   }
 }
+
+/// The StepUp Hub logo, clipped to a circle with a broad navy + orange ring.
+class BrandLogo extends StatelessWidget {
+  final double size;
+  const BrandLogo({super.key, this.size = 40});
+
+  @override
+  Widget build(BuildContext context) {
+    final ring = (size * 0.07).clamp(2.0, 6.0);
+    return Container(
+      width: size,
+      height: size,
+      padding: EdgeInsets.all(ring),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: kOrange,
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: size * 0.2, offset: Offset(0, size * 0.06))],
+      ),
+      child: Container(
+        padding: EdgeInsets.all(ring),
+        decoration: const BoxDecoration(shape: BoxShape.circle, color: kNavy),
+        child: ClipOval(
+          child: Container(color: Colors.white, child: Image.asset('assets/logo.png', fit: BoxFit.cover)),
+        ),
+      ),
+    );
+  }
+}
+
+/// Password text field with an eye button to show/hide what's typed.
+class PasswordField extends StatefulWidget {
+  final TextEditingController controller;
+  final String label;
+  final String? Function(String?)? validator;
+  final ValueChanged<String>? onSubmitted;
+  const PasswordField({super.key, required this.controller, this.label = 'Password', this.validator, this.onSubmitted});
+
+  @override
+  State<PasswordField> createState() => _PasswordFieldState();
+}
+
+class _PasswordFieldState extends State<PasswordField> {
+  bool _obscure = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: widget.controller,
+      obscureText: _obscure,
+      validator: widget.validator,
+      onFieldSubmitted: widget.onSubmitted,
+      decoration: InputDecoration(
+        labelText: widget.label,
+        prefixIcon: const Icon(Icons.lock_outline, size: 20),
+        suffixIcon: IconButton(
+          tooltip: _obscure ? 'Show password' : 'Hide password',
+          icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: 20),
+          onPressed: () => setState(() => _obscure = !_obscure),
+        ),
+      ),
+    );
+  }
+}
+
+String initialsOf(String? name) {
+  final parts = (name ?? '?').trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+  if (parts.isEmpty) return '?';
+  return parts.take(2).map((p) => p[0].toUpperCase()).join();
+}
+
+/// Round initials avatar in the brand gradient.
+class UserAvatar extends StatelessWidget {
+  final String? name;
+  final double size;
+  const UserAvatar(this.name, {super.key, this.size = 36});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [kNavy, kOrange]),
+      ),
+      child: Text(initialsOf(name), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: size * 0.36)),
+    );
+  }
+}

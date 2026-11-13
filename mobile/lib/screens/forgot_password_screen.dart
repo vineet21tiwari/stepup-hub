@@ -62,7 +62,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Image.asset('assets/logo.png', height: 56),
+                      const BrandLogo(size: 84),
                       const SizedBox(height: 14),
                       const Text('Reset your password', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
                       const Text('Enter your account email and a new password.', style: TextStyle(color: Colors.grey), textAlign: TextAlign.center),
@@ -84,17 +84,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
                               ),
                               const SizedBox(height: 12),
-                              TextFormField(
+                              PasswordField(
                                 controller: _newPassword,
-                                decoration: const InputDecoration(labelText: 'New password'),
-                                obscureText: true,
+                                label: 'New password',
                                 validator: (v) => (v == null || v.length < 6) ? 'At least 6 characters' : null,
                               ),
                               const SizedBox(height: 12),
-                              TextFormField(
+                              PasswordField(
                                 controller: _confirmPassword,
-                                decoration: const InputDecoration(labelText: 'Confirm new password'),
-                                obscureText: true,
+                                label: 'Confirm new password',
                                 validator: (v) => (v == null || v.length < 6) ? 'At least 6 characters' : null,
                               ),
                               const SizedBox(height: 20),

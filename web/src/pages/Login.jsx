@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import logo from "../assets/logo.png";
 import { roleHome } from "../utils/roleHome";
 import ThemeToggle from "../components/ThemeToggle";
+import PasswordInput from "../components/PasswordInput";
 
 export default function Login() {
   const { login } = useAuth();
@@ -41,8 +42,7 @@ export default function Login() {
           <label>Email</label>
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
           <label>Password</label>
-          <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
-          <br></br>
+          <PasswordInput required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
           <p className="auth-forgot">
             <Link to="/forgot-password">Forgot password?</Link>
           </p>

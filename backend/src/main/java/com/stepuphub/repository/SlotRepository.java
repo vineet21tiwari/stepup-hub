@@ -14,4 +14,5 @@ public interface SlotRepository extends JpaRepository<Slot, Long> {
     List<Slot> findByCourseIdAndCancelledFalse(Long courseId);
     List<Slot> findByStartTimeBetween(Instant from, Instant to);
     List<Slot> findByRecurrenceGroupIdAndCancelledFalse(String recurrenceGroupId);
+    List<Slot> findByCancelledFalseAndRecurrenceGroupIdIsNotNull();
 }
