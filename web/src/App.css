@@ -712,3 +712,98 @@ input:focus, select:focus, textarea:focus {
   .landing-about { grid-template-columns: 1fr; }
   .landing-hero h1 { font-size: 28px; }
 }
+
+/* ==========================================================================
+   Attendance tab (course page) — see components/AttendanceReport.jsx
+   ========================================================================== */
+.course-tabs { margin-bottom: 14px; }
+.att-card { padding: 18px 20px; }
+.att-toolbar { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.att-toolbar-filter { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
+.att-toolbar-filter label { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.att-toolbar-filter select { padding: 8px 10px; }
+.att-toolbar-export { display: flex; gap: 8px; }
+.att-export-btn { display: inline-flex; align-items: center; gap: 8px; }
+.att-export-icon { font-size: 9.5px; font-weight: 800; letter-spacing: 0.04em; padding: 2px 5px; border-radius: 4px; color: #fff; }
+.att-export-xls { background: #1d7a45; }
+.att-export-pdf { background: #c62828; }
+
+.att-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+.att-stat {
+  position: relative; overflow: hidden; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 14px 12px 18px;
+}
+.att-stat::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(180deg, var(--navy) 0%, var(--orange) 100%); }
+.att-stat-value { font-size: 24px; font-weight: 800; color: var(--navy); letter-spacing: -0.02em; line-height: 1.1; }
+.att-stat-label { color: var(--text-muted); font-size: 11.5px; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; }
+.att-stat .att-bar { margin-top: 10px; }
+.att-tone-ok .att-stat-value { color: var(--ok-text); }
+.att-tone-warn .att-stat-value { color: var(--warn-text); }
+.att-tone-bad .att-stat-value { color: var(--bad-text); }
+
+.att-bar { height: 6px; border-radius: 999px; background: var(--muted-bg); overflow: hidden; }
+.att-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--navy); transition: width 0.5s var(--ease); }
+.att-tone-ok .att-bar > span, .att-bar.att-tone-ok > span { background: var(--ok-text); }
+.att-tone-warn .att-bar > span, .att-bar.att-tone-warn > span { background: var(--warn-text); }
+.att-tone-bad .att-bar > span, .att-bar.att-tone-bad > span { background: var(--bad-text); }
+.att-bar-inline { width: 70px; height: 5px; }
+
+.att-pending-banner { background: var(--warn-bg); color: var(--warn-text); font-weight: 600; }
+.att-view-switch { margin-bottom: 12px; }
+
+.att-table-wrap { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.att-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.att-table th {
+  text-align: left; padding: 10px 12px; background: var(--muted-bg); color: var(--text-muted);
+  font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap;
+}
+.att-table td { padding: 11px 12px; border-top: 1px solid var(--border); vertical-align: top; }
+.att-table tbody tr:hover { background: var(--bg); }
+.att-table td .pill.small { margin-top: 4px; }
+.att-row-pending { background: var(--accent-tint); }
+.att-cell-strong { font-weight: 700; color: var(--navy-dark); }
+.att-cell-sub { color: var(--text-muted); font-size: 12.5px; margin-top: 2px; }
+.att-count { display: flex; flex-direction: column; gap: 5px; }
+.att-absent { color: var(--bad-text); max-width: 260px; }
+.att-none { color: var(--text-muted); font-style: italic; }
+
+.att-students { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.att-student { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); }
+.att-student-avatar {
+  flex: 0 0 36px; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-dark) 100%); color: #fff; font-weight: 800;
+}
+.att-student-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.att-student-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+
+@media (max-width: 900px) {
+  .att-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Phones: the register becomes one card per class, each cell labelled from data-label. */
+@media (max-width: 600px) {
+  .att-card { padding: 14px; }
+  .att-toolbar { align-items: stretch; }
+  .att-toolbar-filter { flex: 1 1 100%; }
+  .att-toolbar-export { flex: 1 1 100%; }
+  .att-toolbar-export .btn { flex: 1; justify-content: center; }
+  .att-stat-value { font-size: 20px; }
+  .att-view-switch { display: flex; width: 100%; }
+  .att-view-switch .segmented-btn { flex: 1; }
+
+  .att-table-wrap { border: none; border-radius: 0; overflow: visible; }
+  .att-table, .att-table tbody, .att-table tr, .att-table td { display: block; width: 100%; }
+  .att-table thead { display: none; }
+  .att-table tr { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; padding: 4px 12px; background: var(--surface); }
+  .att-table tr.att-row-pending { background: var(--accent-tint); }
+  .att-table td { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-top: 1px dashed var(--border); padding: 8px 0; text-align: right; max-width: none; }
+  .att-table td:first-child { border-top: none; display: block; text-align: left; padding-bottom: 6px; }
+  .att-table td:first-child::before { display: none; }
+  .att-table td::before {
+    content: attr(data-label); flex: 0 0 auto; text-align: left; color: var(--text-muted);
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .att-table td > div { display: flex; flex-direction: column; align-items: flex-end; }
+  .att-table td:first-child > div { align-items: flex-start; }
+  .att-count { align-items: flex-end; }
+}

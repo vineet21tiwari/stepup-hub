@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../api/endpoints.dart';
 import '../theme.dart';
+import '../utils/attendance_report.dart';
 import '../widgets/attendance_panel.dart';
+import 'attendance_report_screen.dart';
 import '../widgets/class_change_panel.dart';
 import '../widgets/course_chat.dart';
 import '../widgets/common.dart';
@@ -131,6 +133,8 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                 const SizedBox(height: 6),
                 if (dayClasses.isEmpty) const EmptyState('No classes this day.', icon: Icons.event_busy),
                 for (final s in dayClasses) _dayClassCard(s),
+                const SizedBox(height: 6),
+                _attendanceEntry(),
               ],
               const SizedBox(height: 20),
               CourseFeedWidget(courseId: widget.courseId, canManage: _access!['canManage'] == true),
@@ -197,6 +201,51 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
           AttendancePanelWidget(session: s, onChanged: _replaceSession),
           ClassChangePanel(session: s, onApplied: _refreshSessions),
         ],
+      ),
+    );
+  }
+
+  /// Tile that opens the full attendance register (stats, class-wise, student-wise, export).
+  Widget _attendanceEntry() {
+    final held = heldClasses(_sessions ?? []);
+    final marked = held.where((s) => s['durationMinutes'] != null).length;
+    return Material(
+      color: Theme.of(context).cardTheme.color,
+      borderRadius: BorderRadius.circular(kRadius),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(kRadius),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => AttendanceReportScreen(courseId: widget.courseId, courseTitle: _course!['title'] ?? ''),
+        )),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(kRadius),
+            border: Border.all(color: Theme.of(context).dividerColor),
+          ),
+          child: Row(children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [kNavy, kNavyDark]),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.fact_check_outlined, color: Colors.white),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Attendance report', style: TextStyle(fontWeight: FontWeight.w800)),
+                Text(
+                  held.isEmpty ? 'No classes held yet' : '$marked of ${held.length} past classes marked · Export Excel / PDF',
+                  style: const TextStyle(color: Colors.grey, fontSize: 12.5),
+                ),
+              ]),
+            ),
+            const Icon(Icons.chevron_right),
+          ]),
+        ),
       ),
     );
   }

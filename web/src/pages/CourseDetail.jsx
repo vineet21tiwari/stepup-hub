@@ -4,6 +4,7 @@ import { CourseAccessApi, CourseApi } from "../api/endpoints";
 import ResumePreview from "../components/ResumePreview";
 import CourseClasses from "../components/CourseClasses";
 import CourseFeed from "../components/CourseFeed";
+import AttendanceReport from "../components/AttendanceReport";
 
 // Classroom-style course page: course details + this user's classes (with the Join / Start class
 // controls) in the side panel, and the posts / announcements / assignments feed in the main column.
@@ -15,8 +16,10 @@ export default function CourseDetail() {
   const [coordinators, setCoordinators] = useState([]);
   const [access, setAccess] = useState(null);
   const [error, setError] = useState("");
+  const [tab, setTab] = useState("feed");
 
   useEffect(() => {
+    setTab("feed");
     setCourse(null);
     setAccess(null);
     setError("");
@@ -77,7 +80,23 @@ export default function CourseDetail() {
 
         <section className="course-main">
           {access.member ? (
-            <CourseFeed courseId={id} canManage={access.canManage} />
+            <>
+              <div className="segmented course-tabs" role="tablist">
+                <button type="button" role="tab" aria-selected={tab === "feed"} className={`segmented-btn ${tab === "feed" ? "active" : ""}`} onClick={() => setTab("feed")}>
+                  Feed
+                </button>
+                <button type="button" role="tab" aria-selected={tab === "attendance"} className={`segmented-btn ${tab === "attendance" ? "active" : ""}`} onClick={() => setTab("attendance")}>
+                  Attendance
+                </button>
+              </div>
+              {tab === "feed" ? (
+                <CourseFeed courseId={id} canManage={access.canManage} />
+              ) : (
+                <div className="card att-card">
+                  <AttendanceReport courseId={id} courseTitle={course.title} />
+                </div>
+              )}
+            </>
           ) : (
             <p className="empty-state">Book a class in this course to see its posts, announcements and assignments.</p>
           )}
